@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f4eddf"><title>ポケットタウン</title>
+<style>
+:root{color-scheme:light;--ink:#332f35;--muted:#685e67;--line:#ded3c7;--paper:#fffaf1;--accent:#913e56}*{box-sizing:border-box}body{margin:0;background:#f4eddf;color:var(--ink);font:15px system-ui,sans-serif}main{width:min(1080px,100%);margin:auto;padding:clamp(12px,4vw,40px)}header{display:flex;justify-content:space-between;align-items:end;gap:12px;margin-bottom:18px}h1,h2,h3,p{margin:0}h1{font:800 clamp(28px,6vw,52px) Georgia,serif;letter-spacing:-.045em}h1 span{display:block;font:800 11px system-ui;letter-spacing:.22em;color:var(--accent);margin-bottom:4px}h2{font-size:20px;margin-bottom:8px}p{line-height:1.65}small,.muted{color:var(--muted)}nav,.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}nav{margin:16px 0}button,input,select{font:inherit;color:inherit}button,input,select{min-height:44px;border:1px solid var(--line);border-radius:10px;background:#fffaf3;padding:8px 13px}button{cursor:pointer;font-weight:650}button:hover,button[aria-selected=true],button[aria-pressed=true]{border-color:var(--accent);color:var(--accent);background:#f7e2e8}button:disabled{opacity:.45;cursor:default}.primary{background:#8f3d53;color:#fff!important;border-color:#8f3d53}.primary:hover{background:#742a42}.panel{border:1px solid var(--line);border-radius:17px;background:var(--paper);padding:clamp(12px,2.5vw,24px)}.columns{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}.frame{overflow:hidden;border-radius:13px;background:#d9cab8;border:1px solid #bdae9f}.frame canvas{display:block;width:100%;image-rendering:pixelated}.fields{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}.fields label{display:grid;gap:3px;font-size:13px}.fields input,.fields select{width:100%;min-width:0}.controls{margin-top:10px}.list{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-top:10px}.resident{display:flex;align-items:center;gap:6px;text-align:left}.resident canvas{width:58px;height:58px;image-rendering:pixelated}.section{margin-top:14px}.story{display:grid;gap:10px;margin-top:12px}.memory{display:grid;gap:7px}.memory h3{font-size:16px}.pill{background:#eee1db;border-radius:999px;padding:6px 10px;white-space:nowrap;font-size:12px}#notice{min-height:25px;font-size:13px;margin-top:9px;color:#7a344c}[hidden]{display:none!important}@media(max-width:660px){header{align-items:start}.columns{grid-template-columns:1fr}.panel{padding:12px}.frame{max-width:520px}.fields{gap:6px}}
+</style></head><body><main>
+<header><h1><span>POCKET TOWN</span>ポケットタウン</h1><span class="pill" id="count"></span></header>
+<p class="muted">つくった子が、街で出会う。</p>
+<nav aria-label="メニュー"><button data-tab="studio" aria-pressed="true">キャラ作成</button><button data-tab="town" aria-pressed="false">お出かけ</button><button data-tab="album" aria-pressed="false">アルバム</button></nav>
+<section id="studio">
+<div class="columns"><div class="panel"><h2>着せ替えプレビュー</h2><div class="frame"><canvas id="portrait" width="256" height="176" aria-label="ドット絵の試着プレビュー"></canvas></div><div class="row controls" id="views"><button data-view="front" aria-pressed="true">正面</button><button data-view="side" aria-pressed="false">横</button><button data-view="back" aria-pressed="false">後ろ</button><button id="motion" aria-pressed="false">歩く</button></div></div>
+<form class="panel" id="editor"><h2 id="editorTitle">新しい住人</h2><div class="fields" id="fields"></div><div class="row"><button type="submit" class="primary" id="save">街に住む</button><button type="button" id="new">新しく作る</button></div></form></div>
+<div class="panel section"><h2>街の住人</h2><p class="muted">住人をタップすると着せ替えを編集できます。</p><div class="list" id="residents"></div></div></section>
+<section id="town" hidden><div class="columns"><div class="panel"><h2 id="placeTitle">街へお出かけ</h2><div class="frame"><canvas id="street" width="320" height="176" aria-label="街で出会う二人"></canvas></div></div><div class="panel"><h2>誰とどこへ行く？</h2><div class="fields"><label>ひとりめ<select id="first"></select></label><label>ふたりめ<select id="second"></select></label><label>行き先<select id="place"><option value="bakery">パン屋</option><option value="park">公園</option></select></label></div><button id="outing" class="primary">出かける</button><div class="story" id="story" aria-live="polite"></div></div></div></section>
+<section id="album" class="panel" hidden><h2>思い出アルバム</h2><p class="muted">二人で過ごした場面を、写真カードとして残せます。</p><div id="memories" class="list"></div></section>
+<p id="notice" aria-live="polite"></p></main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const labels={hair:['ショート','おかっぱ','ツインテール','ふわふわ','ロング','はね髪'],hairColor:['栗色','金色','青','桃色','黒','緑'],skin:['明るい','小麦色','深い褐色'],eyes:['まるい目','やさしい目','きりっとした目'],outfit:['サロペット','ワンピース','パーカー','ロングコート','メイド服','お祭りの法被'],cloth:['青','赤','緑','すみれ','からし','黒'],shoes:['革靴','白スニーカー','ブーツ'],accessory:['なし','リボン','猫耳','丸メガネ','ベレー帽','花冠'],personality:['好奇心旺盛','のんびり','おせっかい']};
+const fieldNames={hair:'髪型',hairColor:'髪色',skin:'肌',eyes:'目',outfit:'服',cloth:'服の色',shoes:'靴',accessory:'小物',personality:'性格'};
+const base={name:'',hair:0,hairColor:0,skin:0,eyes:0,outfit:0,cloth:0,shoes:0,accessory:0,personality:0};
+const examples=[{...base,id:'mio',name:'ミオ',hair:2,hairColor:3,outfit:1,cloth:3,accessory:1,personality:1},{...base,id:'sora',name:'ソラ',hair:5,hairColor:2,skin:1,outfit:3,cloth:0,shoes:2,personality:0}];
+const key='pocket-town-v1';
+let state={people:examples,memories:[]};
+try{const value=JSON.parse(localStorage.getItem(key));if(value&&Array.isArray(value.people)&&value.people.length>=2&&Array.isArray(value.memories))state=value}catch{}
+let draft={...base},editing=null,view='front',walk=false,tab='studio',scene=null;
+function notice(message){$('notice').textContent=message}
+function store(){try{localStorage.setItem(key,JSON.stringify(state));return true}catch{notice('このブラウザでは保存できません。現在の画面内で遊べます。');return false}}
+const hairPalette=[['#402c32','#805043','#b87c62'],['#62402e','#d2a158','#f1cc78'],['#273555','#486b9d','#76a5c5'],['#6c3557','#ce7393','#f2a5b2'],['#252637','#454052','#777083'],['#253b3a','#507856','#8ba86a']];
+const skinPalette=[['#b66f64','#f5b295','#ffd8ac'],['#915454','#cf8968','#f2b384'],['#623b42','#a4604f','#ce8c67']];
+const clothPalette=[['#34405e','#567ba3','#82b0c2'],['#70364b','#ad5060','#de7980'],['#304b43','#578268','#8caf7b'],['#54415f','#896da5','#b397ca'],['#664538','#b48146','#e3b768'],['#353243','#535060','#85818a']];
+function rect(c,color,x,y,w,h){c.fillStyle=color;c.fillRect(x,y,w,h)}
+function shape(c,color,points){c.beginPath();points.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fillStyle=color;c.fill()}
+function sprite(c,x,y,scale,p,direction='front',time=0,motion='idle'){
+ c.save();c.translate(Math.round(x),Math.round(y));c.scale(scale,scale);c.imageSmoothingEnabled=false;
+ const [hd,hm,hl]=hairPalette[p.hairColor], [sd,sm,sl]=skinPalette[p.skin], [cd,cm,cl]=clothPalette[p.cloth],outline='#362b39';
+ const stride=motion==='walk'?Math.floor(time/145)%4:0, bounce=motion==='joy'?Math.round(Math.abs(Math.sin(time/120))*5):stride%2, side=direction==='side',back=direction==='back';
+ rect(c,'#45334935',17,56,30,3);c.translate(0,-bounce);
+ if([1,2,4].includes(p.hair)){rect(c,hd,13,24,38,p.hair===4?24:16);rect(c,hm,15,25,34,p.hair===4?20:13)}
+ const shoe=['#63454a','#f5e8d7','#584452'][p.shoes];
+ const lift=stride===1?2:stride===3?-2:0;
+ for(const [fx,delta] of [[24,lift],[34,-lift]]){rect(c,outline,fx,46+delta,8,11);rect(c,sm,fx+1,47+delta,6,5);rect(c,shoe,fx,52+delta,9,4);rect(c,'#eee0c3',fx+1,54+delta,7,1)}
+ const skirt=p.outfit===1||p.outfit===4, long=p.outfit===3||p.outfit===5, hem=skirt?51:long?50:46;
+ shape(c,outline,[[23,34],[41,34],[45,41],[skirt||long?47:43,hem],[skirt||long?17:21,hem],[19,41]]);
+ shape(c,cm,[[24,36],[40,36],[43,42],[skirt||long?44:41,hem-2],[skirt||long?20:23,hem-2],[21,42]]);
+ rect(c,cl,25,38,4,hem-40);rect(c,cd,37,40,4,hem-42);
+ const arm=motion==='joy'?36:41;
+ rect(c,outline,18,arm,5,8);rect(c,sm,19,arm+2,4,5);rect(c,outline,41,arm,5,8);rect(c,sm,41,arm+2,4,5);
+ if(!back){
+  if(p.outfit===0){rect(c,cd,25,36,2,9);rect(c,cd,37,36,2,9);rect(c,cl,27,41,10,4);rect(c,'#f1cf85',26,40,2,2);rect(c,'#f1cf85',36,40,2,2)}
+  if(p.outfit===2){rect(c,cl,28,38,8,3);rect(c,cd,29,43,6,2)}
+  if(p.outfit===3||p.outfit===5){rect(c,cd,31,36,2,13);rect(c,p.outfit===5?'#f3d38d':cl,24,43,16,2)}
+  if(p.outfit===4){rect(c,'#fff2dd',27,36,10,3);rect(c,'#fff2dd',24,44,16,5);rect(c,'#d8bdc1',25,48,14,1)}
+  if(p.outfit===1){rect(c,cl,22,46,20,2);rect(c,cd,26,40,12,2)}
+ }else if(p.outfit===2||p.outfit===3){rect(c,cd,27,35,10,6);rect(c,cl,29,36,6,3)}
+ shape(c,outline,[[20,9],[42,9],[48,15],[48,28],[44,34],[38,37],[25,37],[19,34],[16,28],[16,16]]);
+ shape(c,back?hm:sm,[[21,11],[42,11],[46,17],[46,28],[42,33],[37,35],[25,35],[20,32],[18,26],[18,17]]);
+ if(!back){rect(c,sl,22,19,19,9);rect(c,sl,24,27,16,5);rect(c,sd,17,24,3,5);rect(c,sm,45,24,3,5);
+  const blink=motion==='sleep'||time%3800>3650;
+  for(const ex of side?[39]:[24,37]){
+   if(blink||p.eyes===1){rect(c,outline,ex,25,4,1);if(!blink)rect(c,outline,ex+1,24,2,1)}
+   else{rect(c,outline,ex,23,p.eyes===2?4:3,4);rect(c,'#fff3dd',ex+1,23,1,1)}
+  }
+  rect(c,'#dc8b86',22,28,4,2);rect(c,'#dc8b86',40,28,4,2);rect(c,sd,side?44:31,30,motion==='joy'?4:2,motion==='joy'?2:1);
+  if(p.accessory===3){for(const ex of side?[38]:[22,35]){c.strokeStyle='#654f59';c.lineWidth=1;c.strokeRect(ex+.5,22.5,7,5)}if(!side)rect(c,'#654f59',30,24,5,1)}
+ }
+ shape(c,hd,[[16,16],[17,12],[20,8],[26,6],[39,6],[46,10],[49,17],[47,23],[44,19],[40,17],[36,20],[32,16],[29,20],[25,18],[21,22],[16,23]]);
+ shape(c,hm,[[18,16],[22,10],[27,8],[39,8],[45,12],[46,16],[40,14],[36,17],[32,13],[27,17],[23,15],[19,19]]);
+ rect(c,hl,24,10,13,2);rect(c,hl,20,13,5,2);
+ if(back){rect(c,hm,19,15,26,p.hair===4?22:17);rect(c,hd,20,30,24,p.hair===4?7:3);rect(c,hl,23,17,3,10);rect(c,hd,39,18,3,11)}
+ if(p.hair===2){rect(c,hd,10,17,9,17);rect(c,hm,11,18,5,13);rect(c,hd,46,17,8,17);rect(c,hm,48,18,4,12);rect(c,cl,14,19,4,3);rect(c,cl,46,19,4,3)}
+ if(p.hair===3||p.hair===5){shape(c,hm,[[19,13],[21,5],[25,8],[32,3],[34,8],[42,4],[41,11]]);rect(c,hl,25,8,9,2)}
+ if(p.accessory===1){shape(c,'#873a61',[[38,12],[40,6],[45,9],[51,6],[51,14],[45,12],[40,15]]);rect(c,'#f28caa',41,9,9,3)}
+ if(p.accessory===2){for(const a of [18,39]){shape(c,hd,[[a,13],[a+1,3],[a+9,12]]);shape(c,'#d987a0',[[a+2,11],[a+3,6],[a+7,11]])}}
+ if(p.accessory===4){shape(c,cd,[[16,13],[21,6],[34,4],[45,7],[50,13],[42,16],[18,16]]);rect(c,cl,23,7,18,2);rect(c,cd,32,2,4,3)}
+ if(p.accessory===5){rect(c,'#4f7750',19,12,27,3);for(let i=0;i<5;i++){rect(c,i%2?'#f8c769':'#f5a4ac',20+i*5,10+i%2,4,4);rect(c,'#fff3c0',21+i*5,11+i%2,1,1)}}
+ c.restore();
+}
+function scenery(c,w,h,place){
+ const studio=place==='studio',park=place==='park';
+ rect(c,studio?'#e6bdac':park?'#a9cbbb':'#efc2ae',0,0,w,h);
+ rect(c,studio?'#c2948a':park?'#8fb6a0':'#d29b8d',0,112,w,4);
+ rect(c,studio?'#b78072':park?'#91a77a':'#c49983',0,116,w,h-116);
+ for(let y=119;y<h;y+=9){rect(c,'#4f354324',0,y,w,1);for(let x=(y%3)*9;x<w;x+=28)rect(c,'#4f354324',x,y,1,9)}
+ if(studio){
+  rect(c,'#ad766e',13,15,66,81);rect(c,'#fff0d1',16,13,60,76);rect(c,'#91bcb0',21,18,50,65);rect(c,'#fdf0d5',44,18,4,65);rect(c,'#fdf0d5',21,48,50,4);
+  rect(c,'#995f58',9,93,74,5);rect(c,'#815851',178,48,66,5);rect(c,'#b57562',200,34,19,14);rect(c,'#657b53',208,18,4,16);rect(c,'#82955c',199,20,8,5);rect(c,'#82955c',212,23,7,5);
+  rect(c,'#89626c',178,61,60,48);rect(c,'#f7e4c7',181,64,54,40);rect(c,'#ca9a9b',190,74,34,20);
+ }else if(park){
+  for(const [x,y] of [[35,78],[83,65],[256,66],[288,89]]){rect(c,'#866654',x-3,y,7,43);shape(c,'#587b61',[[x-27,y+7],[x-23,y-15],[x-11,y-28],[x+13,y-29],[x+27,y-14],[x+30,y+7],[x+17,y+18],[x-18,y+18]]);shape(c,'#79a276',[[x-22,y],[x-17,y-13],[x-8,y-22],[x+10,y-24],[x+23,y-10],[x+16,y+2],[x-12,y+7]])}
+  rect(c,'#89604e',123,93,70,5);rect(c,'#ad7e5c',123,101,70,6);rect(c,'#674b48',131,107,5,13);rect(c,'#674b48',181,107,5,13);
+  for(let i=0;i<21;i++){const x=(i*49)%w,y=122+(i*19)%42;rect(c,'#657c58',x,y,2,5);rect(c,i%2?'#fbdb85':'#f7b9b8',x-1,y-1,4,2)}
+ }else{
+  rect(c,'#a06968',45,24,224,95);rect(c,'#e8b497',48,27,218,90);rect(c,'#754d51',60,65,79,48);rect(c,'#eabf83',64,69,71,40);
+  for(let i=0;i<5;i++){rect(c,'#9b5d42',70+i*12,91,9,8);rect(c,'#f7ca79',71+i*12,92,7,3)}
+  rect(c,'#774f55',168,64,42,54);rect(c,'#975d5a',172,69,34,49);rect(c,'#e8b790',176,73,26,22);rect(c,'#e1b178',198,100,4,3);
+  rect(c,'#815052',39,51,236,13);for(let i=0;i<13;i++)rect(c,i%2?'#f9ddba':'#b66069',40+i*18,49,17,12);
+  rect(c,'#875759',110,30,91,15);c.font='bold 9px monospace';c.fillStyle='#fff0d0';c.fillText('BAKERY',138,40);
+  for(const x of [29,285]){rect(c,'#a56d63',x,106,14,12);rect(c,'#658361',x+4,97,7,12);rect(c,'#edabb2',x+1,96,5,5);rect(c,'#f2cf8b',x+8,94,5,5)}
+ }
+}
+const stories={
+ bakery:{name:'パン屋',prompt:'焼きたての香りが通りまで広がっています。',choices:[
+  {name:'パンを分ける',title:'半分こした焼きたてパン',line:'二人は紙袋を開き、まだ温かいパンを半分こしました。',reward:'半分こ'},
+  {name:'お店を手伝う',title:'パン屋の小さなお手伝い',line:'二人でパンを棚に並べると、店先にお客さんが集まりました。',reward:'お手伝い'}]},
+ park:{name:'公園',prompt:'風が吹くたび、草の上に小さな花びらが落ちます。',choices:[
+  {name:'花冠を作る',title:'花びらの冠',line:'二人は花を編み、できた冠をお互いの頭にそっと載せました。',reward:'花冠'},
+  {name:'水たまりを跳ぶ',title:'水たまりを越えて',line:'二人で息を合わせてジャンプ。着地すると、思わず顔を見合わせて笑いました。',reward:'ジャンプ'}]}
+};
+const reactions=['真っ先に近づいて、相手を手招きしました。','あたりを眺めながら、ゆっくり歩き出しました。','相手が困っていないか、そっと声を掛けました。'];
+const escapeHTML=value=>String(value).replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+const uid=()=>globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+Math.random().toString(36).slice(2);
+function renderEditor(){
+ $('editorTitle').textContent=editing?'住人の着せ替え':'新しい住人';$('save').textContent=editing?'変更を保存':'街に住む';
+ $('fields').innerHTML='<label>名前<input name="name" maxlength="16" required placeholder="例　ヒナ" value="'+escapeHTML(draft.name)+'"></label>'+
+ Object.entries(labels).map(([key,list])=>'<label>'+fieldNames[key]+'<select name="'+key+'">'+list.map((v,i)=>'<option value="'+i+'" '+(draft[key]===i?'selected':'')+(key==='accessory'&&i===5&&!state.memories.some(m=>m.reward==='花冠')?'disabled':'')+'>'+v+(key==='accessory'&&i===5&&!state.memories.some(m=>m.reward==='花冠')?'（公園で入手）':'')+'</option>').join('')+'</select></label>').join('');
+}
+function renderResidents(){
+ $('count').textContent='住人 '+state.people.length+' 人';$('residents').replaceChildren();
+ for(const p of state.people){
+  const b=document.createElement('button');b.className='resident';const c=document.createElement('canvas');c.width=c.height=64;c.setAttribute('aria-hidden','true');sprite(c.getContext('2d'),0,0,1,p);
+  const label=document.createElement('span');label.textContent=p.name;b.append(c,label);b.onclick=()=>{editing=p.id;draft={...p};renderEditor();$('editorTitle').scrollIntoView({block:'nearest'})};$('residents').append(b);
+ }
+ const values=[$('first').value,$('second').value];
+ for(const [i,id] of ['first','second'].entries()){
+  const select=$(id);select.replaceChildren(...state.people.map(p=>new Option(p.name,p.id)));
+  select.value=state.people.some(p=>p.id===values[i])?values[i]:state.people[i].id;
+ }
+}
+function switchTab(next){
+ tab=next;for(const b of document.querySelectorAll('[data-tab]')){const active=b.dataset.tab===tab;b.setAttribute('aria-pressed',active);$(b.dataset.tab).hidden=!active}
+ if(tab==='album')renderAlbum();
+}
+document.querySelector('nav').onclick=e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab)};
+$('editor').oninput=e=>{if(e.target.name)draft[e.target.name]=e.target.name==='name'?e.target.value:Number(e.target.value)};
+$('editor').onsubmit=e=>{
+ e.preventDefault();const name=draft.name.trim();if(!name){notice('住人の名前を入力してください。');return}
+ const p={...draft,name,id:editing||uid()};
+ state.people=editing?state.people.map(old=>old.id===editing?p:old):[...state.people,p];
+ const message=editing?'着せ替えを保存しました。':name+'が街の住人になりました。';editing=p.id;draft={...p};renderEditor();renderResidents();if(store())notice(message);
+};
+$('new').onclick=()=>{editing=null;draft={...base};renderEditor();$('editor').elements.name.focus()};
+$('views').onclick=e=>{const b=e.target.closest('[data-view]');if(!b)return;view=b.dataset.view;for(const x of $('views').querySelectorAll('[data-view]'))x.setAttribute('aria-pressed',x===b)};
+$('motion').onclick=()=>{walk=!walk;$('motion').setAttribute('aria-pressed',walk);$('motion').textContent=walk?'止まる':'歩く'};
+function clearOuting(){scene=null;$('story').replaceChildren();$('placeTitle').textContent='街へお出かけ'}
+for(const id of ['first','second','place'])$(id).onchange=clearOuting;
+$('outing').onclick=()=>{
+ const first=state.people.find(p=>p.id===$('first').value),second=state.people.find(p=>p.id===$('second').value);
+ if(!first||!second||first.id===second){notice('別々の住人を二人選んでください。');return}
+ const place=$('place').value, story=stories[place];scene={people:[{...first},{...second}],place,start:performance.now(),result:null};$('placeTitle').textContent=story.name;notice('');
+ const p=document.createElement('p');p.textContent=story.prompt+' '+first.name+'は'+reactions[first.personality];
+ const choices=document.createElement('div');choices.className='row';
+ for(const choice of story.choices){const b=document.createElement('button');b.textContent=choice.name;b.onclick=()=>endOuting(choice);choices.append(b)}
+ $('story').replaceChildren(p,choices);
+};
+function endOuting(choice){
+ if(!scene||scene.result)return;
+ scene.result=choice;scene.start=performance.now();
+ const memory={id:uid(),place:scene.place,people:scene.people,...choice};
+ const existing=state.memories.find(m=>m.place===memory.place&&m.title===memory.title&&m.people.every(p=>memory.people.some(v=>p.id===v.id)));
+ if(!existing){state.memories=[memory,...state.memories];renderEditor();if(store())notice(choice.reward==='花冠'?'思い出と、着せ替え用の花冠を手に入れました。':'思い出がアルバムに追加されました。')}
+ else notice('この思い出はアルバムにあります。');
+ const title=document.createElement('strong');title.textContent=choice.title;const p=document.createElement('p');p.textContent=choice.line;
+ const b=document.createElement('button');b.textContent='アルバムを見る';b.onclick=()=>switchTab('album');$('story').replaceChildren(title,p,b);
+}
+function prop(c,reward){
+ if(reward==='花冠'){for(let i=0;i<7;i++)rect(c,i%2?'#fff0a8':'#f0a1a8',145+i*4,91+Math.abs(3-i)*2,4,4)}
+ if(reward==='半分こ'||reward==='お手伝い'){shape(c,'#ac6e48',[[147,102],[151,94],[165,94],[172,100],[169,108],[149,108]]);rect(c,'#ffdc8d',153,96,12,3);rect(c,'#ffdc8d',158,101,9,2)}
+ if(reward==='ジャンプ'){shape(c,'#89afbe',[[135,145],[145,140],[173,140],[184,146],[173,150],[147,150]]);rect(c,'#e5efde',145,143,20,2)}
+}
+function card(m){
+ const c=document.createElement('canvas');c.width=320;c.height=176;const ctx=c.getContext('2d');
+ scenery(ctx,320,176,m.place);sprite(ctx,83,64,1.4,m.people[0],'front',900,'joy');sprite(ctx,150,64,1.4,m.people[1],'front',1150,'joy');prop(ctx,m.reward);
+ rect(ctx,'#4a3445',0,149,320,27);ctx.fillStyle='#fff1d9';ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText(m.title,160,166);return c;
+}
+function renderAlbum(){
+ const root=$('memories');root.replaceChildren();
+ if(!state.memories.length){const p=document.createElement('p');p.textContent='二人で街へ出かけると、ここに思い出が並びます。';root.append(p);return}
+ for(const m of state.memories){
+  const article=document.createElement('article');article.className='memory';const frame=document.createElement('div');frame.className='frame';const image=card(m);frame.append(image);
+  const title=document.createElement('h3');title.textContent=m.title;const names=document.createElement('small');names.textContent=m.people.map(p=>p.name).join(' ＆ ');
+  const b=document.createElement('button');b.textContent='写真を保存';b.onclick=()=>{const a=document.createElement('a');a.href=image.toDataURL('image/png');a.download='pocket-town-'+m.id+'.png';a.click()};
+  article.append(frame,title,names,b);root.append(article);
+ }
+}
+const portrait=$('portrait').getContext('2d'),street=$('street').getContext('2d');
+let last=0;
+function frame(t){
+ if(t-last>=32){
+  last=t;
+  if(tab==='studio'){scenery(portrait,256,176,'studio');sprite(portrait,48,7,2.5,draft,view,t,walk?'walk':'idle')}
+  if(tab==='town'){
+   scenery(street,320,176,scene?.place||$('place').value);
+   if(scene){const elapsed=t-scene.start,travel=scene.result?1:Math.min(1,Math.max(0,elapsed/950));const motion=scene.result?'joy':travel<1?'walk':'idle';
+    sprite(street,12+71*travel,64,1.4,scene.people[0],travel<1?'side':'front',t,motion);
+    sprite(street,224-74*travel,64,1.4,scene.people[1],'front',t+240,motion);
+    if(scene.result)prop(street,scene.result.reward)
+   }
+  }
+ }
+ requestAnimationFrame(frame);
+}
+renderEditor();renderResidents();requestAnimationFrame(frame);
+</script></body></html>
