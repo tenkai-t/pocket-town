@@ -81,10 +81,14 @@ function sprite(c,x,y,scale,p,direction='front',time=0,motion='idle'){
   const head=wardrobe[0][hairChoice],body=wardrobe[1][outfitChoice];
   if(head.naturalWidth&&body.naturalWidth){
    const lift=walking?[0,2,0,1][phase]:motion==='jump'?5:0;
-   const draw=(im,h,y0,anchor=.5)=>{const w=Math.min(60,h*im.naturalWidth/im.naturalHeight);c.drawImage(im,Math.round(x+(32-w*anchor)*scale),Math.round(y+(y0-lift)*scale),Math.round(w*scale),Math.round(h*scale))};
+   const draw=(im,h,y0,anchor=.5)=>{const w=h*im.naturalWidth/im.naturalHeight;c.drawImage(im,Math.round(x+(32-w*anchor)*scale),Math.round(y+(y0-lift)*scale),Math.round(w*scale),Math.round(h*scale))};
    c.save();c.imageSmoothingEnabled=false;
    if(reverse){c.translate(Math.round(2*x+64*scale),0);c.scale(-1,1)}
-    const [faceAnchor, headHeight] = [[0.5, 39], [0.4867, 39], [0.4765, 39], [0.5082, 39], [0.5, 37.576], [0.4623, 37.143], [0.4793, 35.775], [0.504, 33.438], [0.52, 36.129], [0.52, 37.0], [0.48, 35.556], [0.496, 39], [0.624, 39], [0.536, 34.483], [0.46, 39], [0.5708, 39], [0.48, 29.118], [0.496, 33.448], [0.516, 30.492], [0.544, 34.516], [0.596, 39], [0.432, 39], [0.524, 35.273], [0.508, 39], [0.504, 34.375], [0.496, 37.5], [0.508, 39], [0.488, 34.516], [0.54, 30.704], [0.512, 38.462]][hairChoice];
+    const [faceAnchor] = [[0.5, 39], [0.4867, 39], [0.4765, 39], [0.5082, 39], [0.5, 37.576], [0.4623, 37.143], [0.4793, 35.775], [0.504, 33.438], [0.52, 36.129], [0.52, 37.0], [0.48, 35.556], [0.496, 39], [0.624, 39], [0.536, 34.483], [0.46, 39], [0.5708, 39], [0.48, 29.118], [0.496, 33.448], [0.516, 30.492], [0.544, 34.516], [0.596, 39], [0.432, 39], [0.524, 35.273], [0.508, 39], [0.504, 34.375], [0.496, 37.5], [0.508, 39], [0.488, 34.516], [0.54, 30.704], [0.512, 38.462]][hairChoice];
+    // The approved pink twin-tail sprite is the reference for front cheek width.
+    const cheekWidths=[64, 68, 58, 56, 66, 63, 71, 64, 62, 60, 54, 60, 50, 58, 55, 57, 68, 58, 61, 62, 57, 54, 55, 57, 64, 48, 63, 62, 71, 52];
+    const referenceFaceWidth=71*35.775/145;
+    const headHeight=head.naturalHeight*referenceFaceWidth/cheekWidths[hairChoice];
     function drawFrontParts(){
      const chin=[0.914, 0.985, 0.827, 0.803, 0.992, 0.932, 0.843, 1.0, 1.0, 1.0, 0.9479, 0.7259, 0.8644, 1.0, 0.7563, 0.7214, 1.0, 0.9072, 0.7957, 0.9159, 1.0, 0.8934, 0.9691, 0.9381, 0.9909, 0.8889, 0.7299, 0.8318, 0.9541, 0.85][hairChoice];
      const collar=([.08,.05,.07,.11,.12,.10,.085][outfitChoice]??.07);
@@ -134,11 +138,23 @@ function sprite(c,x,y,scale,p,direction='front',time=0,motion='idle'){
  }
  if(art){
   if(!art.complete||!art.naturalWidth)return;
-  const height=55*scale,width=Math.min(61*scale,height*art.naturalWidth/art.naturalHeight);
+   const height=55*scale,width=height*art.naturalWidth/art.naturalHeight;
+  const portraitIndex=castId>=0?castId:Number.isInteger(p.design)?5+p.design:legacy>=0?10+legacy:-1;
+  const portraitFit=[[0.3, 0.52], [0.2867, 0.54], [0.28, 0.52], [0.2933, 0.51], [0.3267, 0.48], [0.26, 0.49], [0.2533, 0.49], [0.28, 0.42], [0.26, 0.45], [0.2867, 0.46], [0.26, 0.47], [0.2533, 0.44]][portraitIndex];
   const lift=motion==='walk'?Math.round(Math.abs(Math.sin(time/125))*2)*scale:motion==='jump'?Math.round(Math.abs(Math.sin(time/180))*10)*scale:motion==='idle'?0:Math.round(Math.abs(Math.sin(time/160))*3)*scale;
   c.save();c.imageSmoothingEnabled=false;
   if(reverse){c.translate(Math.round(2*x+64*scale),0);c.scale(-1,1)}
-  c.drawImage(art,Math.round(x+32*scale-width/2),Math.round(y+57*scale-height-lift),Math.round(width),Math.round(height));
+  const center=x+32*scale, feet=y+57*scale-lift;
+  if(direction==='front'&&portraitFit){
+   const [cheekRatio,neckRatio]=portraitFit;
+   const headScale=17.52/(55*cheekRatio);
+   const seam=Math.round(art.naturalHeight*neckRatio), headHeight=height*seam/art.naturalHeight;
+   const neck=feet-height+headHeight;
+   c.drawImage(art,0,seam,art.naturalWidth,art.naturalHeight-seam,Math.round(center-width/2),Math.round(neck),Math.round(width),Math.round(feet)-Math.round(neck));
+   c.drawImage(art,0,0,art.naturalWidth,seam,Math.round(center-width*headScale/2),Math.round(neck-headHeight*headScale),Math.round(width*headScale),Math.round(neck)-Math.round(neck-headHeight*headScale));
+  }else{
+   c.drawImage(art,Math.round(center-width/2),Math.round(feet-height),Math.round(width),Math.round(height));
+  }
   c.restore();return;
  }
  c.save();c.translate(Math.round(x),Math.round(y));c.scale(scale,scale);if(direction==='left'){c.translate(64,0);c.scale(-1,1);direction='side'}c.imageSmoothingEnabled=false;
@@ -363,7 +379,7 @@ let last=0;
 function frame(t){
  if(t-last>=32){
   last=t;
-  if(tab==='studio'){scenery(portrait,256,176,'studio');sprite(portrait,48,7,2.5,draft,view,t,walk?'walk':'idle');scenery(compare,320,176,'park');[[...cast,...state.people.filter(p=>originalResident(p)>=0)][+$('compareResident').value],...presets.map((p,i)=>({...p,design:customArt.length?i:null}))].forEach((p,i)=>sprite(compare,40+i*83,65,1.5,p,$('compareView').value,t+i*80,compareWalking?'walk':'idle'))}
+  if(tab==='studio'){scenery(portrait,256,176,'studio');sprite(portrait,48,13,2.5,draft,view,t,walk?'walk':'idle');scenery(compare,320,176,'park');[[...cast,...state.people.filter(p=>originalResident(p)>=0)][+$('compareResident').value],...presets.map((p,i)=>({...p,design:customArt.length?i:null}))].forEach((p,i)=>sprite(compare,40+i*83,65,1.5,p,$('compareView').value,t+i*80,compareWalking?'walk':'idle'))}
   if(tab==='town'){
    scenery(street,320,176,scene?.place||$('place').value);
    if(scene){const elapsed=t-scene.start,travel=scene.result?1:Math.min(1,Math.max(0,elapsed/950));const poses={'半分こ':'share','お手伝い':'help','花冠':'flower','ジャンプ':'jump','専用の仕草':'joy'};
