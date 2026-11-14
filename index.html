@@ -84,13 +84,13 @@ function sprite(c,x,y,scale,p,direction='front',time=0,motion='idle'){
    const draw=(im,h,y0,anchor=.5)=>{const w=Math.min(60,h*im.naturalWidth/im.naturalHeight);c.drawImage(im,Math.round(x+(32-w*anchor)*scale),Math.round(y+(y0-lift)*scale),Math.round(w*scale),Math.round(h*scale))};
    c.save();c.imageSmoothingEnabled=false;
    if(reverse){c.translate(Math.round(2*x+64*scale),0);c.scale(-1,1)}
+    const [faceAnchor, headHeight] = [[0.5, 39], [0.4867, 39], [0.4765, 39], [0.5082, 39], [0.5, 37.576], [0.4623, 37.143], [0.4793, 35.775], [0.504, 33.438], [0.52, 36.129], [0.52, 37.0], [0.48, 35.556], [0.496, 39], [0.624, 39], [0.536, 34.483], [0.46, 39], [0.5708, 39], [0.48, 29.118], [0.496, 33.448], [0.516, 30.492], [0.544, 34.516], [0.596, 39], [0.432, 39], [0.524, 35.273], [0.508, 39], [0.504, 34.375], [0.496, 37.5], [0.508, 39], [0.488, 34.516], [0.54, 30.704], [0.512, 38.462]][hairChoice];
     function drawFrontParts(){
      const chin=[0.914, 0.985, 0.827, 0.803, 0.992, 0.932, 0.843, 1.0, 1.0, 1.0, 0.9479, 0.7259, 0.8644, 1.0, 0.7563, 0.7214, 1.0, 0.9072, 0.7957, 0.9159, 1.0, 0.8934, 0.9691, 0.9381, 0.9909, 0.8889, 0.7299, 0.8318, 0.9541, 0.85][hairChoice];
      const collar=([.08,.05,.07,.11,.12,.10,.085][outfitChoice]??.07);
-     const bodyHeight=33, bodyTop=57-bodyHeight, headHeight=31;
+     const bodyHeight=33, bodyTop=57-bodyHeight;
      draw(body,bodyHeight,bodyTop);
-     const faceCenter=[.50,.50,.50,.50,.50,.50,.50,.51,.52,.52,.48,.51,.62,.54,.46,.55,.50,.52,.50,.56,.63,.44,.52,.51,.50,.50,.48,.50,.55,.51][hairChoice];
-     draw(head,headHeight,bodyTop+bodyHeight*collar-headHeight*chin+3,faceCenter);
+     draw(head,headHeight,bodyTop+bodyHeight*collar-headHeight*chin+3,faceAnchor);
     }
     if(row===null){drawFrontParts()}
     else if(hairChoice>=7||outfitChoice>=7){
@@ -112,9 +112,9 @@ function sprite(c,x,y,scale,p,direction='front',time=0,motion='idle'){
      else drawSlice(fullBody,.53,1,33,24);
      if(profileHead?.naturalWidth){
       const chinDepth=directionIndex===1?(.88):([.92,.98,.92,.92,.83,.82,.98,.85,.80,.97,.86,.87,.96,.96,.86,.96,.94,.94,.92,.79,.89,.96,.90][hairChoice-7]??.9);
-      draw(profileHead,31,29-31*chinDepth,directionIndex===1?.5:.62);
+      draw(profileHead,headHeight,29-headHeight*chinDepth,directionIndex===1?.5:.62);
      }
-     else drawSlice(fullHead,0,.57,31,1,directionIndex===1?.5:.55);
+     else drawSlice(fullHead,0,.57,headHeight,30-headHeight,directionIndex===1?.5:.55);
     }
    else{
     const styles=[0,1,3], tops=[.58,.58,.56,.57,.58];
@@ -126,7 +126,7 @@ function sprite(c,x,y,scale,p,direction='front',time=0,motion='idle'){
      const topCut=Math.round(top.naturalHeight*(tops[hairIndex]??.56)),bottomCut=Math.round(bottom.naturalHeight*(tops[outfitIndex]??.56));
      const topW=Math.min(60,55*top.naturalWidth/top.naturalHeight), bottomW=Math.min(60,55*bottom.naturalWidth/bottom.naturalHeight);
      c.drawImage(bottom,0,bottomCut,bottom.naturalWidth,bottom.naturalHeight-bottomCut,Math.round(x+(32-bottomW/2)*scale),Math.round(y+(27-lift)*scale),Math.round(bottomW*scale),Math.round(30*scale));
-     c.drawImage(top,0,0,top.naturalWidth,topCut,Math.round(x+(32-topW/2)*scale),Math.round(y+(2-lift)*scale),Math.round(topW*scale),Math.round(29*scale));
+     c.drawImage(top,0,0,top.naturalWidth,topCut,Math.round(x+(32-topW*headHeight/58)*scale),Math.round(y+(31-headHeight-lift)*scale),Math.round(topW*headHeight/29*scale),Math.round(headHeight*scale));
     }else{drawFrontParts()}
    }
    c.restore();return;
